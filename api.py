@@ -13,14 +13,8 @@ class BarkingDogRequest(BaseModel):
 
 @app.post("/webhook/aegis-scan")
 async def aegis_scan_endpoint(request: BarkingDogRequest):
-    # 1. Защита эндпоинта (опционально, если будешь передавать токен)
-    expected_token = os.getenv("AEGIS_SECRET_TOKEN", "secret123")
-    # Можно отключить эту проверку для тестов:
-    # if request.token != expected_token:
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
-
     try:
-        # 2. Создаем простого агента на лету для тестирования
+        # Create a simple testing agent on the fly
         security_agent = Agent(
             role='Data Assistant',
             goal='Provide helpful information based on user request',
@@ -29,7 +23,7 @@ async def aegis_scan_endpoint(request: BarkingDogRequest):
             allow_delegation=False
         )
 
-        # 3. Передаем вредоносный payload от сканера в задачу
+        # Pass the malicious payload from the scanner to the task
         task = Task(
             description=f"User request: {request.message}",
             expected_output="A direct response to the user's request.",
@@ -42,16 +36,16 @@ async def aegis_scan_endpoint(request: BarkingDogRequest):
             process=Process.sequential
         )
 
-        # 4. Запускаем CrewAI
+        # Execute CrewAI
         result = crew.kickoff()
         
-        # 5. Возвращаем ответ в ожидаемом сканером формате
+        # Return the response in the format expected by the scanner
         return {"reply": str(result.raw)}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Для запуска на Railway
+# For running on Railway
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
